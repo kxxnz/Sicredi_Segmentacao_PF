@@ -4,7 +4,7 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn import tree
-import matplotlib.pyplot as plt
+from sklearn.tree import export_text
 from dados import gerar_dados
 from classificacao import classificar_pf, definir_canal
 from modelos import preparar_dados_modelo, treinar_modelo_arvore, avaliar_modelo
@@ -126,17 +126,15 @@ with aba1:
             st.subheader("Distribuição Hierárquica")
             plot_segment_distribution(dados_filtrados)
         
-        with col_viz2:
-            st.subheader("Análise Comparativa")
-            tab1, tab2 = st.tabs(["📊 Médias Financeiras", "📦 Distribuição de Valores"])
-            
-            with tab1:
-                fig = grafico_medias_segmentos(dados_filtrados)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with tab2:
-                fig = grafico_boxplots(dados_filtrados)
-                st.plotly_chart(fig, use_container_width=True)
+    with col_viz2:
+        st.subheader("Comparativo Financeiro")
+        tab1, tab2 = st.tabs(["Médias", "Distribuição"])
+        with tab1:
+            fig = grafico_medias_segmentos(dados_filtrados)
+            st.plotly_chart(fig, use_container_width=True)
+        with tab2:
+            fig = grafico_boxplots(dados_filtrados)
+            st.plotly_chart(fig, use_container_width=True)
 
 # Aba 2 - Modelo Preditivo
 with aba2:
@@ -209,16 +207,12 @@ with aba3:
         
         with col_det1:
             st.subheader("Árvore de Decisão")
-            fig = tree.plot_tree(
-                st.session_state.modelo,
-                feature_names=['Renda', 'Investimentos'],
-                class_names=st.session_state.encoder.classes_,
-                filled=True,
-                rounded=True,
-                fontsize=8
+            tree_rules = export_text(
+            st.session_state.modelo,
+            feature_names=['Renda_Mensal', 'Investimentos'],
+            class_names=st.session_state.encoder.classes_
             )
-            st.pyplot(plt.gcf())
-            plt.clf()
+            st.code(tree_rules, language='text')
         
         with col_det2:
             st.subheader("Importância das Variáveis")
@@ -227,9 +221,6 @@ with aba3:
                 ['Renda_Mensal', 'Investimentos']
             )
             st.plotly_chart(fig, use_container_width=True)
-    
-    with st.expander("📜 Regras de Classificação", expanded=True):
-        st.code(rules, language='text')
 
 # Aba 4 - Simulador
 with aba4:

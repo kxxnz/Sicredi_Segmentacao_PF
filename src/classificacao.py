@@ -1,4 +1,3 @@
-
 def classificar_pf(renda, investimento):
     if renda <= 2000:
         return 'PF I'
