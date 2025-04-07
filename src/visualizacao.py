@@ -15,20 +15,48 @@ def plot_segment_distribution(df):
     fig.update_layout(margin=dict(t=30, l=0, r=0, b=0))
     return fig
 
-def grafico_medias_segmentos(df):
-    df_agg = df.groupby('Segmento_PF')[['Renda_Mensal', 'Investimentos']].mean().reset_index()
-    fig = px.bar(df_agg,
-                 x='Segmento_PF',
-                 y=['Renda_Mensal', 'Investimentos'],
-                 barmode='group',
-                 color_discrete_sequence=COLOR_SCHEME[:2])
+def grafico_medias_segmentos(dados, theme):
+    fig = px.bar(
+        dados,
+        x='Segmento_PF',
+        y='Investimentos',
+        color='Segmento_PF',
+        color_discrete_sequence=theme['chart_colors']
+    )
+    fig.update_layout(
+        paper_bgcolor=theme['background'],
+        plot_bgcolor=theme['card_background'],
+        font=dict(color=theme['text'])
+    )
     return fig
 
-def grafico_boxplots(df):
-    fig = go.Figure()
-    # Boxplot para Renda Mensal
-    fig.add_trace(go.Box(y=df['Renda_Mensal'], x=df['Segmento_PF'], name='Renda'))
-    # Boxplot para Investimentos
-    fig.add_trace(go.Box(y=df['Investimentos'], x=df['Segmento_PF'], name='Investimentos'))
-    fig.update_layout(boxmode='group')
+def grafico_boxplots(dados, theme):
+    fig = px.box(
+        dados,
+        x='Segmento_PF',
+        y='Investimentos',
+        color='Segmento_PF',
+        color_discrete_sequence=theme['chart_colors']
+    )
+    fig.update_layout(
+        paper_bgcolor=theme['background'],
+        plot_bgcolor=theme['card_background'],
+        font=dict(color=theme['text'])
+    )
+    return fig
+
+def grafico_importancia(modelo, features):
+    importancia = modelo.feature_importances_
+    fig = px.bar(
+        x=features,
+        y=importancia,
+        labels={'x': 'Variáveis', 'y': 'Importância'},
+        color=importancia,
+        color_continuous_scale=COLOR_SCHEME
+    )
+    fig.update_layout(
+        title_text="Importância das Variáveis",
+        showlegend=False,
+        height=300
+    )
     return fig

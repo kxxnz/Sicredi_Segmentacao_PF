@@ -1,33 +1,6 @@
-# -*- coding: utf-8 -*-
-import pandas as pd
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
-from sklearn import tree
-from sklearn.tree import export_text
-from dados import gerar_dados
-from classificacao import classificar_pf, definir_canal
-from modelos import preparar_dados_modelo, treinar_modelo_arvore, avaliar_modelo
-from visualizacao import (plot_segment_distribution, grafico_medias_segmentos, grafico_boxplots, grafico_importancia, create_metric_card)
-import sys
-from pathlib import Path
 
-# Adiciona o diretório pai ao caminho de importação
-current_dir = Path(__file__).parent
-root_dir = current_dir.parent
-sys.path.append(str(root_dir))
-
-# Configurações de tema e layout
-CUSTOM_THEME = {
-    "primary": "#2A4C7D",
-    "secondary": "#3E7CB1",
-    "accent": "#5CA4A9",
-    "background": "#FFFFFF",
-    "text": "#2D3436",
-    "success": "#27ae60",
-    "warning": "#f1c40f"
-}
-
+# ---- Configuração Inicial ----
 st.set_page_config(
     page_title="Segmentação PF | Sicredi Vanguarda",
     page_icon="📈",
@@ -35,29 +8,83 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---- Estilos Customizados ----
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn import tree
+from sklearn.tree import export_text
+from dados import gerar_dados
+from classificacao import classificar_pf, definir_canal
+from modelos import preparar_dados_modelo, treinar_modelo_arvore, avaliar_modelo
+from visualizacao import (
+    plot_segment_distribution,
+    grafico_medias_segmentos,
+    grafico_boxplots,
+    grafico_importancia
+)
+import sys
+from pathlib import Path
+from theme import THEME_LIGHT, THEME_DARK
+
+# Adiciona o diretório pai ao caminho de importação
+current_dir = Path(__file__).parent
+root_dir = current_dir.parent
+sys.path.append(str(root_dir))
+
+# Ensure 'warning' key exists in the theme dictionaries
+THEME_LIGHT['warning'] = '#FFA500'  # Example: Orange color for warnings
+THEME_DARK['warning'] = '#FF4500'   # Example: Darker orange for warnings
+
+# Ensure 'success' key exists in the theme dictionaries
+THEME_LIGHT['success'] = '#28a745'  # Example: Green color for success
+THEME_DARK['success'] = '#218838'   # Example: Darker green for success
+
+# Configurações de tema e layout
+if 'theme' not in st.session_state:
+    st.session_state['theme'] = 'light'
+
+def toggle_theme():
+    st.session_state['theme'] = 'dark' if st.session_state['theme'] == 'light' else 'light'
+
+current_theme = THEME_LIGHT if st.session_state['theme'] == 'light' else THEME_DARK
+
+st.sidebar.button(
+    "Alternar Tema 🌗",
+    on_click=toggle_theme,
+    help="Alterne entre os modos claro e escuro"
+)
+
 st.markdown(f"""
 <style>
-    [data-testid="stSidebar"] {{
-        background-color: {CUSTOM_THEME['secondary']}15;
+    body {{
+        background-color: {current_theme['background']};
+        color: {current_theme['text']};
+        font-family: 'Open Sans', sans-serif;
+    }}
+    h1, h2, h3, h4 {{
+        font-family: 'Montserrat', sans-serif;
     }}
     .css-1vq4p4l {{
-        padding: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: {current_theme['card_background']};
     }}
-    .segment-badge {{
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-weight: 500;
-        background: {CUSTOM_THEME['primary']}20;
-        color: {CUSTOM_THEME['primary']};
-        display: inline-block;
+    .metric-card:hover {{
+        transform: scale(1.02);
+        transition: all 0.2s ease-in-out;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# ---- Preparação dos Dados ----
+# ---- Header com Logo ----
+logo_path = "c:/Users/João P. Reis/Desktop/Sicredi_Segmentacao_PF/assets/sicredi_logo.png"
+try:
+    st.sidebar.image(logo_path, use_container_width=True)
+except FileNotFoundError:
+    st.sidebar.error("Erro: Logo não encontrado. Verifique o caminho do arquivo.")
+
+st.sidebar.markdown(f"<h3 style='color: {current_theme['primary']};'>Segmentação PF</h3>", unsafe_allow_html=True)
+
 @st.cache_data
 def load_data():
     dados = gerar_dados(n=1000)
@@ -72,7 +99,7 @@ dados_clientes = load_data()
 # ---- Interface Principal ----
 st.title("🔍 Análise de Segmentação de Clientes PF")
 st.markdown(f"""
-<div style="border-left: 4px solid {CUSTOM_THEME['primary']}; padding-left: 1rem; margin: 1rem 0;">
+<div style="border-left: 4px solid {current_theme['primary']}; padding-left: 1rem; margin: 1rem 0;">
     Explore os padrões de comportamento e simule cenários de classificação de clientes
 </div>
 """, unsafe_allow_html=True)
@@ -89,7 +116,17 @@ with st.container():
     
     for col, (title, value, variation) in zip(cols, metrics):
         with col:
+            def create_metric_card(title, value, variation):
+                st.markdown(f"""
+                <div class="metric-card" style="padding: 1rem; text-align: center; border: 1px solid {current_theme['border']};">
+                    <h4 style="margin: 0; color: {current_theme['primary']};">{title}</h4>
+                    <p style="font-size: 1.5rem; margin: 0; color: {current_theme['text']};">{value}</p>
+                    <small style="color: {current_theme['secondary']};">{variation if variation else ''}</small>
+                </div>
+                """, unsafe_allow_html=True)
+            
             create_metric_card(title, value, variation)
+            st.metric(label=title, value=value, delta=variation)
 
 # Abas Principais
 aba1, aba2, aba3, aba4 = st.tabs([
@@ -126,15 +163,15 @@ with aba1:
             st.subheader("Distribuição Hierárquica")
             plot_segment_distribution(dados_filtrados)
         
-    with col_viz2:
-        st.subheader("Comparativo Financeiro")
-        tab1, tab2 = st.tabs(["Médias", "Distribuição"])
-        with tab1:
-            fig = grafico_medias_segmentos(dados_filtrados)
-            st.plotly_chart(fig, use_container_width=True)
-        with tab2:
-            fig = grafico_boxplots(dados_filtrados)
-            st.plotly_chart(fig, use_container_width=True)
+        with col_viz2:
+            st.subheader("Comparativo Financeiro")
+            tab1, tab2 = st.tabs(["Médias", "Distribuição"])
+            with tab1:
+                fig = grafico_medias_segmentos(dados_filtrados, current_theme)
+                st.plotly_chart(fig, use_container_width=True)
+            with tab2:
+                fig = grafico_boxplots(dados_filtrados, current_theme)
+                st.plotly_chart(fig, use_container_width=True)
 
 # Aba 2 - Modelo Preditivo
 with aba2:
@@ -175,8 +212,8 @@ with aba2:
             
             if 'resultado' in st.session_state:
                 st.markdown(f"""
-                <div style="padding: 1.5rem; background: {CUSTOM_THEME['success']}15; border-radius: 10px; margin-top: 1rem;">
-                    <h3 style="color: {CUSTOM_THEME['success']}; margin: 0 0 0.5rem 0;">Resultado:</h3>
+                <div style="padding: 1.5rem; background: {current_theme['success']}15; border-radius: 10px; margin-top: 1rem;">
+                    <h3 style="color: {current_theme['success']}; margin: 0 0 0.5rem 0;">Resultado:</h3>
                     <div class="segment-badge">{st.session_state.resultado}</div>
                     <p style="margin: 0.5rem 0 0 0;">Canal recomendado: <strong>{definir_canal(st.session_state.resultado)}</strong></p>
                 </div>
@@ -217,8 +254,8 @@ with aba3:
         with col_det2:
             st.subheader("Importância das Variáveis")
             fig = grafico_importancia(
-                st.session_state.modelo,
-                ['Renda_Mensal', 'Investimentos']
+            st.session_state.modelo,
+            ['Renda_Mensal', 'Investimentos']
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -254,29 +291,34 @@ with aba4:
                 x='Renda_Mensal',
                 y='Investimentos',
                 color='Segmento_PF',
-                color_discrete_sequence=CUSTOM_THEME.values(),
+                color_discrete_sequence=current_theme['chart_colors'],
                 hover_data=['Regiao'],
                 title="Posicionamento no Contexto Geral"
+            )
+            fig.update_layout(
+                paper_bgcolor=current_theme['background'],
+                plot_bgcolor=current_theme['card_background'],
+                font=dict(color=current_theme['text'])
             )
             fig.add_trace(go.Scatter(
                 x=[nova_renda],
                 y=[novo_investimento],
                 mode='markers',
-                marker=dict(color='red', size=12),
+                marker=dict(color=current_theme['accent'], size=12),
                 name='Cliente Simulado'
             ))
             st.plotly_chart(fig, use_container_width=True)
             
             st.markdown(f"""
-            <div style="padding: 1.5rem; background: {CUSTOM_THEME['warning']}15; border-radius: 10px;">
+            <div style="padding: 1.5rem; background: {current_theme['warning']}15; border-radius: 10px;">
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                     <div>
-                        <h4 style="margin: 0 0 0.5rem 0; color: {CUSTOM_THEME['text']};">Classificação</h4>
+                        <h4 style="margin: 0 0 0.5rem 0; color: {current_theme['text']};">Classificação</h4>
                         <div class="segment-badge">{segmento}</div>
                     </div>
                     <div>
-                        <h4 style="margin: 0 0 0.5rem 0; color: {CUSTOM_THEME['text']};">Canal Ideal</h4>
-                        <div class="segment-badge" style="background: {CUSTOM_THEME['accent']}20; color: {CUSTOM_THEME['accent']};">{canal}</div>
+                        <h4 style="margin: 0 0 0.5rem 0; color: {current_theme['text']};">Canal Ideal</h4>
+                        <div class="segment-badge" style="background: {current_theme['accent']}20; color: {current_theme['accent']};">{canal}</div>
                     </div>
                 </div>
             </div>
@@ -285,8 +327,8 @@ with aba4:
 # ---- Sidebar com informações ----
 with st.sidebar:
     st.markdown(f"""
-    <div style="padding: 1rem; background: {CUSTOM_THEME['primary']}10; border-radius: 10px;">
-        <h3 style="color: {CUSTOM_THEME['primary']};">ℹ️ Como usar</h3>
+    <div style="padding: 1rem; background: {current_theme['primary']}10; border-radius: 10px;">
+        <h3 style="color: {current_theme['primary']};">ℹ️ Como usar</h3>
         <ol style="margin: 0; padding-left: 1rem;">
             <li>Selecione a aba de análise desejada</li>
             <li>Ajuste os filtros conforme necessário</li>
